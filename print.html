@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Daily Schedule - Print View</title>
+<style>
+  :root{
+    --card-bg: #ffffff;
+    --card-stroke: #e5e7eb;
+    --text: #111827;
+    --muted: #6b7280;
+    --bg: #ffffff;
+    --grid-stroke: #d1d5db;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; padding: 0; }
+  body {
+    font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+  }
+  
+  @media print {
+    body { padding: 8px; }
+    .no-print { display: none !important; }
+    .print-header { break-inside: avoid; }
+  }
+  
+  .print-container {
+    max-width: 100%;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    min-height: 100vh;
+    padding: 20px;
+    border-radius: 16px;
+  }
+  
+  .print-header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding: 24px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+  }
+  
+  .print-title {
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0 0 8px 0;
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+  }
+  
+  .print-subtitle {
+    font-size: 18px;
+    color: var(--muted);
+    margin: 0 0 16px 0;
+    font-weight: 500;
+  }
+  
+  .summary-stats {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin: 24px 0;
+    flex-wrap: wrap;
+  }
+  
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    backdrop-filter: blur(8px);
+    font-weight: 600;
+    font-size: 14px;
+    transition: transform 0.2s ease;
+  }
+  
+  .stat-item:hover {
+    transform: translateY(-2px);
+  }
+  
+  .stat-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid rgba(255,255,255,0.5);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  
+  .print-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin: 16px 0;
+  }
+  
+  .hour-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .print-hour {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    font-variant-numeric: tabular-nums;
+    border-bottom: 2px solid var(--grid-stroke);
+    padding-bottom: 4px;
+  }
+  
+  .blocks-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .print-block {
+    position: relative;
+    width: 120px;
+    height: 80px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    overflow: hidden;
+    transition: transform 0.2s ease;
+  }
+  
+  .print-block:hover {
+    transform: translateY(-2px);
+  }
+  
+  .print-block.assigned {
+    border: 2px solid rgba(255,255,255,0.3);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .print-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    opacity: 0.95;
+  }
+  
+  .print-time {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.95);
+    background: rgba(0,0,0,0.25);
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-variant-numeric: tabular-nums;
+    backdrop-filter: blur(4px);
+  }
+  
+  .print-category {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 16px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+  }
+  
+  .print-note {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    font-size: 10px;
+    line-height: 1.3;
+    color: rgba(255,255,255,0.95);
+    background: rgba(0,0,0,0.25);
+    padding: 4px 8px;
+    border-radius: 6px;
+    backdrop-filter: blur(4px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  
+  .print-block.empty .print-time {
+    color: var(--muted);
+    background: rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+  
+  /* Category colors */
+  .cat-sleep .print-fill { 
+    background: linear-gradient(180deg, #1f3b73, #162d57) !important; 
+  }
+  .cat-deep .print-fill { 
+    background: linear-gradient(180deg, #0e7a5f, #0a5d49) !important; 
+  }
+  .cat-work .print-fill { 
+    background: linear-gradient(180deg, #2563eb, #1e3a8a) !important; 
+  }
+  .cat-study .print-fill { 
+    background: linear-gradient(180deg, #7c3aed, #4c1d95) !important; 
+  }
+  .cat-ex .print-fill { 
+    background: linear-gradient(180deg, #dc2626, #7f1d1d) !important; 
+  }
+  .cat-admin .print-fill { 
+    background: linear-gradient(180deg, #6b7280, #374151) !important; 
+  }
+  .cat-meet .print-fill { 
+    background: linear-gradient(180deg, #f59e0b, #b45309) !important; 
+  }
+  .cat-break .print-fill { 
+    background: linear-gradient(180deg, #06b6d4, #0e7490) !important; 
+  }
+  
+  @media print {
+    /* Ensure colors print correctly */
+    .cat-sleep .print-fill { background: #1f3b73 !important; }
+    .cat-deep .print-fill { background: #0e7a5f !important; }
+    .cat-work .print-fill { background: #2563eb !important; }
+    .cat-study .print-fill { background: #7c3aed !important; }
+    .cat-ex .print-fill { background: #dc2626 !important; }
+    .cat-admin .print-fill { background: #6b7280 !important; }
+    .cat-meet .print-fill { background: #f59e0b !important; }
+    .cat-break .print-fill { background: #06b6d4 !important; }
+    
+    /* Ensure print colors are enabled */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+  }
+  
+  .controls {
+    text-align: center;
+    margin: 20px 0;
+    gap: 12px;
+    display: flex;
+    justify-content: center;
+  }
+  
+  button {
+    padding: 8px 16px;
+    border: 1px solid var(--card-stroke);
+    background: var(--card-bg);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  
+  button:hover {
+    background: #f3f4f6;
+  }
+  
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 24px 0;
+    flex-wrap: wrap;
+    padding: 20px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(6px);
+  }
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  
+  @media print {
+    .print-container {
+      background: white;
+      padding: 12px;
+    }
+    
+    .print-header {
+      background: white;
+      box-shadow: none;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .print-title {
+      color: #1e3a8a !important;
+      -webkit-text-fill-color: #1e3a8a !important;
+    }
+    
+    .stat-item, .legend {
+      background: white;
+      box-shadow: none;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .print-block {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    
+    .hour-section {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="print-container">
+    <div class="print-header">
+      <div class="print-title" id="printTitle">Daily Schedule</div>
+      <div class="print-subtitle" id="printSubtitle">Loading...</div>
+    </div>
+    
+    <div class="summary-stats" id="summaryStats"></div>
+    
+    <div class="legend" id="printLegend"></div>
+    
+    <div class="controls no-print">
+      <button onclick="window.print()">🖨️ Print</button>
+      <button onclick="window.close()">✕ Close</button>
+    </div>
+    
+    <div class="print-grid" id="printGrid"></div>
+  </div>
+
+<script>
+const CATS = [
+  {id:'sleep', name:'Sleep',  emoji:'🛌', color:'#1f3b73', cls:'cat-sleep'},
+  {id:'deep',  name:'Deep Work', emoji:'🚀', color:'#0e7a5f', cls:'cat-deep'},
+  {id:'work',  name:'Work',  emoji:'💼', color:'#2563eb', cls:'cat-work'},
+  {id:'study', name:'Study', emoji:'📚', color:'#7c3aed', cls:'cat-study'},
+  {id:'ex',    name:'Exercise', emoji:'🏃', color:'#dc2626', cls:'cat-ex'},
+  {id:'admin', name:'Admin', emoji:'🧾', color:'#6b7280', cls:'cat-admin'},
+  {id:'meet',  name:'Meetings', emoji:'🗣️', color:'#f59e0b', cls:'cat-meet'},
+  {id:'break', name:'Break', emoji:'☕', color:'#06b6d4', cls:'cat-break'}
+];
+
+const BLOCK_MIN = 15;
+const PER_HOUR = 4;
+const HOURS = 24;
+
+let printData = null;
+
+function fmtHM(d) {
+  return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+function getCatById(id) {
+  return CATS.find(c => c.id === id);
+}
+
+function calculateTotals(data) {
+  const totals = {};
+  Object.keys(data).forEach(k => {
+    const c = data[k].cat;
+    if (!c) return;
+    totals[c] = (totals[c] || 0) + 1;
+  });
+  return totals;
+}
+
+function buildPrintGrid(opStart, data) {
+  const grid = document.getElementById('printGrid');
+  grid.innerHTML = '';
+  
+  console.log('Building print grid. OpStart:', opStart, 'Data entries:', Object.keys(data || {}).length);
+  
+  let assignedBlocks = 0;
+  
+  for (let h = 0; h < HOURS; h++) {
+    const hourStart = new Date(opStart.getTime() + h * 60 * 60 * 1000);
+    
+    // Create hour section container
+    const hourSection = document.createElement('div');
+    hourSection.className = 'hour-section';
+    
+    // Create hour label
+    const hourLabel = document.createElement('div');
+    hourLabel.className = 'print-hour';
+    hourLabel.textContent = fmtHM(hourStart);
+    hourSection.appendChild(hourLabel);
+    
+    // Create blocks row for this hour
+    const blocksRow = document.createElement('div');
+    blocksRow.className = 'blocks-row';
+    
+    let hasAssignmentsThisHour = false;
+    
+    for (let q = 0; q < PER_HOUR; q++) {
+      const idx = h * PER_HOUR + q;
+      const start = new Date(opStart.getTime() + idx * BLOCK_MIN * 60 * 1000);
+      
+      const assignment = data[idx];
+      if (assignment && assignment.cat) {
+        hasAssignmentsThisHour = true;
+        
+        const cell = document.createElement('div');
+        cell.className = 'print-block assigned';
+        
+        const cat = getCatById(assignment.cat);
+        if (cat) {
+          cell.classList.add(cat.cls);
+          cell.innerHTML = `
+            <div class="print-fill"></div>
+            <div class="print-time">${fmtHM(start)}</div>
+            <div class="print-category">${cat.emoji}</div>
+            ${assignment.note ? `<div class="print-note">${assignment.note}</div>` : ''}
+          `;
+          assignedBlocks++;
+        } else {
+          console.warn(`Category not found for assignment:`, assignment);
+        }
+        
+        blocksRow.appendChild(cell);
+      }
+    }
+    
+    // Only show hours that have assignments
+    if (hasAssignmentsThisHour) {
+      hourSection.appendChild(blocksRow);
+      grid.appendChild(hourSection);
+    }
+  }
+  
+  console.log(`Built grid with ${assignedBlocks} assigned blocks`);
+}
+
+function buildSummaryStats(data) {
+  const totals = calculateTotals(data);
+  const statsContainer = document.getElementById('summaryStats');
+  statsContainer.innerHTML = '';
+  
+  // Calculate specific category totals
+  const workTotal = (totals.work || 0) + (totals.deep || 0) + (totals.study || 0) + (totals.meet || 0) + (totals.admin || 0);
+  const sleepTotal = totals.sleep || 0;
+  const exerciseTotal = totals.ex || 0;
+  const funTotal = totals.break || 0;
+  
+  const stats = [
+    { label: '💼 Work', hours: (workTotal * BLOCK_MIN / 60), color: '#2563eb' },
+    { label: '🛌 Sleep', hours: (sleepTotal * BLOCK_MIN / 60), color: '#1f3b73' },
+    { label: '🏃 Exercise', hours: (exerciseTotal * BLOCK_MIN / 60), color: '#dc2626' },
+    { label: '☕ Fun/Break', hours: (funTotal * BLOCK_MIN / 60), color: '#06b6d4' }
+  ];
+  
+  stats.forEach(stat => {
+    if (stat.hours > 0) {
+      const statElement = document.createElement('div');
+      statElement.className = 'stat-item';
+      statElement.innerHTML = `
+        <div class="stat-swatch" style="background: ${stat.color}"></div>
+        <span>${stat.label}: ${stat.hours.toFixed(stat.hours % 1 === 0 ? 0 : 1)}h</span>
+      `;
+      statsContainer.appendChild(statElement);
+    }
+  });
+}
+
+function buildLegend() {
+  const legendContainer = document.getElementById('printLegend');
+  legendContainer.innerHTML = '';
+  
+  CATS.forEach(cat => {
+    const legendItem = document.createElement('div');
+    legendItem.className = 'legend-item';
+    legendItem.innerHTML = `
+      <div class="stat-swatch" style="background: ${cat.color}"></div>
+      <span>${cat.emoji} ${cat.name}</span>
+    `;
+    legendContainer.appendChild(legendItem);
+  });
+}
+
+function initializePrintView(data) {
+  printData = data;
+  console.log('Initializing print view with data:', data);
+  
+  document.getElementById('printTitle').textContent = data.dayInfo.day;
+  document.getElementById('printSubtitle').textContent = data.dayInfo.span;
+  
+  buildLegend();
+  buildSummaryStats(data.data);
+  buildPrintGrid(data.opStart, data.data);
+  
+  // Show data status
+  const dataCount = Object.keys(data.data || {}).length;
+  console.log(`Print view loaded with ${dataCount} scheduled blocks`);
+}
+
+function loadPrintData() {
+  // First try to get data from localStorage
+  try {
+    const storedData = localStorage.getItem('aktimetable-print-data');
+    if (storedData) {
+      const data = JSON.parse(storedData);
+      data.opStart = new Date(data.opStart);
+      initializePrintView(data);
+      // Clean up the stored data
+      localStorage.removeItem('aktimetable-print-data');
+      return true;
+    }
+  } catch (e) {
+    console.warn('Failed to load from localStorage:', e);
+  }
+  
+  // Fallback: try to get data from opener window
+  if (window.opener && window.opener.aktimetableData) {
+    const openerData = window.opener.aktimetableData;
+    initializePrintView({
+      opStart: openerData.state.opStart,
+      data: openerData.state.data,
+      dayInfo: openerData.fmtDate(openerData.state.opStart)
+    });
+    return true;
+  }
+  
+  return false;
+}
+
+// Listen for data from parent window (postMessage fallback)
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.opStart) {
+    event.data.opStart = new Date(event.data.opStart);
+    initializePrintView(event.data);
+  }
+});
+
+// Try to load data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  if (!loadPrintData()) {
+    // If no data found, try again after a short delay
+    setTimeout(loadPrintData, 100);
+  }
+});
+
+// Also try loading data immediately
+loadPrintData();
+</script>
+</body>
+</html>
